@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LASA Loans — Money Ledger</title>
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --navy-mid: #1b2e44;
+    --navy-light: #243b55;
+    --gold: #c9a84c;
+    --gold-light: #e8c97b;
+    --gold-pale: #fdf6e3;
+    --white: #ffffff;
+    --surface: #f8f6f1;
+    --border: #e2ddd4;
+    --text: #1a1614;
+    --text-muted: #6b6360;
+    --red: #b91c1c;
+    --red-light: #fee2e2;
+    --green: #166534;
+    --green-light: #dcfce7;
+    --amber: #92400e;
+    --amber-light: #fef3c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--surface); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--navy);
+    color: var(--white);
+    padding: 0 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+    border-bottom: 2px solid var(--gold);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 32px; height: 32px; background: var(--gold); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--navy); letter-spacing: 0.5px; }
+  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+  .logo-sub { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 1px; text-transform: uppercase; }
+  .sync-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.6); cursor: pointer; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #6b7280; transition: background 0.3s; }
+  .sync-dot.synced { background: #22c55e; }
+  .sync-dot.syncing { background: var(--gold); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .setup-banner {
+    background: var(--amber-light);
+    border-bottom: 1px solid #fbbf24;
+    padding: 10px 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; color: var(--amber);
+  }
+  .setup-banner a { color: var(--amber); font-weight: 600; }
+  .setup-btn { background: var(--amber); color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+
+  .summary-bar {
+    background: var(--navy-mid);
+    padding: 1rem 1.5rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;
+  }
+  .stat { text-align: center; }
+  .stat-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: 700; color: var(--gold-light); }
+  .stat-value.big { font-size: 24px; }
+  .stat-sub { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+
+  .add-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+  .card-title svg { color: var(--gold); }
+
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px; letter-spacing: 0.3px; }
+  input, select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: 14px; background: var(--surface); color: var(--text); outline: none; transition: border 0.2s; }
+  input:focus, select:focus { border-color: var(--gold); background: white; }
+  .calc-result { background: var(--gold-pale); border: 1px solid #e8d48a; border-radius: 7px; padding: 9px 12px; font-size: 14px; font-weight: 600; color: var(--navy); }
+  .form-actions { margin-top: 1rem; display: flex; gap: 10px; }
+  .btn-primary { background: var(--navy); color: white; border: none; padding: 10px 24px; border-radius: 7px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s; }
+  .btn-primary:hover { background: var(--navy-light); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 10px 16px; border-radius: 7px; font-size: 14px; cursor: pointer; }
+  .btn-ghost:hover { background: var(--surface); }
+
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .filter-bar input { max-width: 220px; }
+  .filter-tab { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; font-size: 12px; cursor: pointer; font-weight: 500; color: var(--text-muted); transition: all 0.15s; }
+  .filter-tab.active { background: var(--navy); color: white; border-color: var(--navy); }
+
+  .loans-list { display: flex; flex-direction: column; gap: 10px; }
+  .loan-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .loan-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .loan-card.overdue { border-left: 4px solid var(--red); }
+  .loan-card.paid { border-left: 4px solid #22c55e; opacity: 0.75; }
+  .loan-card.active { border-left: 4px solid var(--gold); }
+
+  .loan-top { padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+  .borrower-info { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--navy); color: var(--gold); font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .borrower-name { font-size: 16px; font-weight: 600; color: var(--text); }
+  .borrower-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .loan-amounts { text-align: right; }
+  .amount-total { font-size: 20px; font-weight: 700; color: var(--navy); }
+  .amount-label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+
+  .loan-details {
+    border-top: 1px solid var(--border);
+    padding: 10px 1.25rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 8px; background: var(--surface);
+  }
+  .detail-item { }
+  .detail-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 2px; }
+  .detail-value { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  .loan-actions { padding: 8px 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-sm { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: white; font-size: 12px; cursor: pointer; color: var(--text-muted); font-weight: 500; transition: all 0.15s; }
+  .btn-sm:hover { background: var(--surface); }
+  .btn-sm.paid-btn { color: var(--green); border-color: #bbf7d0; }
+  .btn-sm.paid-btn:hover { background: var(--green-light); }
+  .btn-sm.delete-btn { color: var(--red); border-color: #fecaca; }
+  .btn-sm.delete-btn:hover { background: var(--red-light); }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .status-active { background: var(--amber-light); color: var(--amber); }
+  .status-paid { background: var(--green-light); color: var(--green); }
+  .status-overdue { background: var(--red-light); color: var(--red); }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 1rem; opacity: 0.3; }
+  .empty-text { font-size: 15px; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .modal { background: white; border-radius: 14px; width: 100%; max-width: 420px; overflow: hidden; }
+  .modal-header { background: var(--navy); color: white; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-size: 15px; }
+  .modal-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 20px; line-height: 1; }
+  .modal-body { padding: 1.5rem; }
+  .modal-body input { margin-top: 4px; margin-bottom: 12px; }
+  .modal-footer { padding: 0 1.5rem 1.25rem; display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Setup Modal */
+  .setup-field { margin-bottom: 1rem; }
+  .setup-help { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+  .setup-help a { color: var(--navy); }
+  .code-hint { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 6px 10px; font-family: monospace; font-size: 12px; color: var(--navy); margin-top: 4px; display: block; }
+
+  @media (max-width: 600px) {
+    header { padding: 0 1rem; }
+    main { padding: 1rem; }
+    .summary-bar { padding: 1rem; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .loan-top { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .loan-amounts { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">LF</div>
+    <div>
+      <div class="logo-text">LASA Loans</div>
+      <div class="logo-sub">Money Ledger</div>
+    </div>
+  </div>
+  <div class="sync-indicator" onclick="openSetup()" title="Click to configure sync">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncLabel">Not configured</span>
+  </div>
+</header>
+
+<div class="setup-banner" id="setupBanner">
+  ⚙️ One-time setup needed — configure your GitHub Gist to enable live sync across all devices.
+  <button class="setup-btn" onclick="openSetup()">Set up sync</button>
+</div>
+
+<div class="summary-bar">
+  <div class="stat">
+    <div class="stat-label">Total Lent</div>
+    <div class="stat-value big" id="statLent">R 0.00</div>
+    <div class="stat-sub">capital out</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Interest Earned</div>
+    <div class="stat-value" id="statInterest">R 0.00</div>
+    <div class="stat-sub">on active loans</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total Receivable</div>
+    <div class="stat-value" id="statReceivable">R 0.00</div>
+    <div class="stat-sub">capital + interest</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Overdue</div>
+    <div class="stat-value" id="statOverdue" style="color:#f87171">0</div>
+    <div class="stat-sub">past due date</div>
+  </div>
+</div>
+
+<main>
+  <!-- Add Loan -->
+  <div class="add-card">
+    <div class="card-title">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Record New Loan
+    </div>
+    <div class="form-grid">
+      <div>
+        <label>Borrower Name *</label>
+        <input type="text" id="fName" placeholder="e.g. John Sithole" />
+      </div>
+      <div>
+        <label>Loan Date *</label>
+        <input type="date" id="fDate" />
+      </div>
+      <div>
+        <label>Due Date</label>
+        <input type="date" id="fDue" />
+      </div>
+      <div>
+        <label>Capital Amount (R) *</label>
+        <input type="number" id="fCapital" placeholder="500.00" min="0" step="0.01" oninput="calcRepayment()" />
+      </div>
+      <div>
+        <label>Interest Rate (%)</label>
+        <input type="number" id="fRate" placeholder="10" min="0" step="0.01" value="10" oninput="calcRepayment()" />
+      </div>
+      <div>
+        <label>Repayment Amount</label>
+        <div class="calc-result" id="fRepayment">R —</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;">
+      <label>Notes (optional)</label>
+      <input type="text" id="fNotes" placeholder="e.g. School fees loan, paid weekly" style="margin-top:4px;" />
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="addLoan()" id="addBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Add Loan
+      </button>
+      <button class="btn-ghost" onclick="clearForm()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" id="searchInput" placeholder="Search by name..." oninput="renderLoans()" style="max-width:200px;" />
+    <button class="filter-tab active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-tab" onclick="setFilter('active', this)">Active</button>
+    <button class="filter-tab" onclick="setFilter('overdue', this)">Overdue</button>
+    <button class="filter-tab" onclick="setFilter('paid', this)">Paid</button>
+  </div>
+
+  <div class="loans-list" id="loansList"></div>
+</main>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="deleteModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Delete Loan Record</h3>
+      <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#6b6360;line-height:1.6;">Are you sure you want to delete the loan for <strong id="deleteNameLabel"></strong>? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn-primary" style="background:var(--red)" onclick="confirmDelete()" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mark Paid Modal -->
+<div class="modal-overlay" id="paidModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Mark as Paid</h3>
+      <button class="modal-close" onclick="closeModal('paidModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#6b6360;margin-bottom:1rem;">Record payment received from <strong id="paidNameLabel"></strong>.</p>
+      <label>Date Paid</label>
+      <input type="date" id="paidDateInput" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('paidModal')">Cancel</button>
+      <button class="btn-primary" style="background:var(--green)" onclick="confirmPaid()">Mark Paid</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gist ID Success Modal -->
+<div class="modal-overlay" id="gistSuccessModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header" style="background:#166534;">
+      <h3>✅ Sync Connected!</h3>
+      <button class="modal-close" onclick="closeModal('gistSuccessModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">
+        Your loan data is now saving to GitHub. To use this app on another device, you will need your <strong>Gist ID</strong> below — save it somewhere safe (WhatsApp yourself, Notes app, etc.).
+      </p>
+      <label>Your Gist ID — tap and copy this</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <input type="text" id="gistIdDisplay" readonly style="font-family:monospace;font-size:13px;background:var(--surface);color:var(--navy);font-weight:600;" />
+        <button class="btn-primary" onclick="copyGistId()" id="copyGistBtn" style="white-space:nowrap;flex-shrink:0;">Copy</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.5;">
+        On any other device: open the app → click sync indicator → paste your token + this Gist ID → Save & Connect.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('gistSuccessModal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Setup Modal -->
+<div class="modal-overlay" id="setupModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>⚙️ GitHub Gist Sync Setup</h3>
+      <button class="modal-close" onclick="closeModal('setupModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;line-height:1.6;">This app stores your loan data in a private GitHub Gist — free, secure, and accessible from any device with your link.</p>
+      
+      <div class="setup-field">
+        <label>GitHub Personal Access Token *</label>
+        <input type="password" id="setupToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+        <div class="setup-help">
+          Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> → 
+          set Note = "LASA Loans" → Expiration = No expiration → check <span class="code-hint">gist</span> scope → Generate token → paste here.
+        </div>
+      </div>
+
+      <div class="setup-field">
+        <label>Gist ID (leave blank to create new)</label>
+        <input type="text" id="setupGistId" placeholder="Will be auto-created on first save" />
+        <div class="setup-help">If you already have a Gist ID from a previous setup, paste it here to continue syncing your existing data.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('setupModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveSetup()">Save & Connect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let loans = [];
+let currentFilter = 'all';
+let deleteTargetId = null;
+let paidTargetId = null;
+let config = { token: '', gistId: '' };
+let syncTimeout = null;
+
+const TODAY = new Date().toISOString().split('T')[0];
+document.getElementById('fDate').value = TODAY;
+
+function loadConfig() {
+  try {
+    const c = localStorage.getItem('lasa_loans_config');
+    if (c) {
+      config = JSON.parse(c);
+      if (config.token) {
+        document.getElementById('setupBanner').style.display = 'none';
+        setSyncState('syncing', 'Connecting...');
+        loadFromGist();
+      }
+    }
+  } catch(e) {}
+}
+
+function saveConfig() {
+  localStorage.setItem('lasa_loans_config', JSON.stringify(config));
+}
+
+function setSyncState(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+async function loadFromGist() {
+  if (!config.token || !config.gistId) return;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${config.gistId}`, {
+      headers: { Authorization: `token ${config.token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error('Failed');
+    const data = await res.json();
+    const content = data.files['lasa-loans.json']?.content;
+    if (content) {
+      loans = JSON.parse(content);
+    }
+    setSyncState('synced', 'Synced');
+    renderAll();
+  } catch(e) {
+    setSyncState('error', 'Sync error');
+  }
+}
+
+async function saveToGist() {
+  if (!config.token) return;
+  setSyncState('syncing', 'Saving...');
+  const body = { files: { 'lasa-loans.json': { content: JSON.stringify(loans, null, 2) } } };
+  try {
+    let res;
+    if (config.gistId) {
+      res = await fetch(`https://api.github.com/gists/${config.gistId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `token ${config.token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      body.description = 'LASA Loans Data';
+      body.public = false;
+      res = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { Authorization: `token ${config.token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        const d = await res.json();
+        config.gistId = d.id;
+        saveConfig();
+      }
+    }
+    if (!res.ok) throw new Error();
+    setSyncState('synced', 'Saved ✓');
+  } catch(e) {
+    setSyncState('error', 'Save failed');
+  }
+}
+
+function queueSync() {
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(saveToGist, 800);
+}
+
+function calcRepayment() {
+  const capital = parseFloat(document.getElementById('fCapital').value) || 0;
+  const rate = parseFloat(document.getElementById('fRate').value) || 0;
+  const interest = capital * rate / 100;
+  const total = capital + interest;
+  document.getElementById('fRepayment').textContent = capital > 0 ? `R ${total.toFixed(2)} (interest: R ${interest.toFixed(2)})` : 'R —';
+  return { capital, rate, interest, total };
+}
+
+function addLoan() {
+  const name = document.getElementById('fName').value.trim();
+  const date = document.getElementById('fDate').value;
+  const due = document.getElementById('fDue').value;
+  const notes = document.getElementById('fNotes').value.trim();
+  const { capital, rate, interest, total } = calcRepayment();
+
+  if (!name) return alert('Please enter borrower name.');
+  if (!date) return alert('Please select a loan date.');
+  if (!capital || capital <= 0) return alert('Please enter a valid capital amount.');
+
+  const loan = {
+    id: Date.now().toString(),
+    name, date, due, notes,
+    capital, rate, interest,
+    repayment: total,
+    status: 'active',
+    paidDate: null,
+    createdAt: new Date().toISOString()
+  };
+
+  loans.unshift(loan);
+  queueSync();
+  clearForm();
+  renderAll();
+}
+
+function clearForm() {
+  document.getElementById('fName').value = '';
+  document.getElementById('fDate').value = TODAY;
+  document.getElementById('fDue').value = '';
+  document.getElementById('fCapital').value = '';
+  document.getElementById('fRate').value = '10';
+  document.getElementById('fNotes').value = '';
+  document.getElementById('fRepayment').textContent = 'R —';
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderLoans();
+}
+
+function getStatus(loan) {
+  if (loan.status === 'paid') return 'paid';
+  if (loan.due && loan.due < TODAY) return 'overdue';
+  return 'active';
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,dy] = d.split('-');
+  return `${dy}/${m}/${y}`;
+}
+
+function renderSummary() {
+  const active = loans.filter(l => getStatus(l) !== 'paid');
+  const totalCapital = active.reduce((s,l) => s + l.capital, 0);
+  const totalInterest = active.reduce((s,l) => s + l.interest, 0);
+  const totalReceivable = active.reduce((s,l) => s + l.repayment, 0);
+  const overdue = active.filter(l => getStatus(l) === 'overdue').length;
+  document.getElementById('statLent').textContent = `R ${totalCapital.toFixed(2)}`;
+  document.getElementById('statInterest').textContent = `R ${totalInterest.toFixed(2)}`;
+  document.getElementById('statReceivable').textContent = `R ${totalReceivable.toFixed(2)}`;
+  document.getElementById('statOverdue').textContent = overdue;
+}
+
+function renderLoans() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  let list = loans;
+  if (search) list = list.filter(l => l.name.toLowerCase().includes(search));
+  if (currentFilter !== 'all') list = list.filter(l => getStatus(l) === currentFilter);
+
+  const container = document.getElementById('loansList');
+  if (list.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No loans found</div></div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(loan => {
+    const status = getStatus(loan);
+    const statusBadge = {
+      active: '<span class="status-badge status-active">Active</span>',
+      overdue: '<span class="status-badge status-overdue">Overdue</span>',
+      paid: '<span class="status-badge status-paid">Paid</span>'
+    }[status];
+
+    return `
+    <div class="loan-card ${status}">
+      <div class="loan-top">
+        <div class="borrower-info">
+          <div class="avatar">${getInitials(loan.name)}</div>
+          <div>
+            <div class="borrower-name">${loan.name}</div>
+            <div class="borrower-meta">Lent ${fmtDate(loan.date)} ${loan.due ? '· Due ' + fmtDate(loan.due) : ''} ${loan.notes ? '· ' + loan.notes : ''}</div>
+          </div>
+        </div>
+        <div class="loan-amounts">
+          <div class="amount-label">Total Repayable</div>
+          <div class="amount-total">R ${loan.repayment.toFixed(2)}</div>
+          <div style="margin-top:4px;">${statusBadge}</div>
+        </div>
+      </div>
+      <div class="loan-details">
+        <div class="detail-item">
+          <div class="detail-label">Capital</div>
+          <div class="detail-value">R ${loan.capital.toFixed(2)}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Rate</div>
+          <div class="detail-value">${loan.rate}%</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Interest</div>
+          <div class="detail-value">R ${loan.interest.toFixed(2)}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Due Date</div>
+          <div class="detail-value">${fmtDate(loan.due)}</div>
+        </div>
+        ${loan.paidDate ? `<div class="detail-item"><div class="detail-label">Paid On</div><div class="detail-value" style="color:var(--green)">${fmtDate(loan.paidDate)}</div></div>` : ''}
+      </div>
+      <div class="loan-actions">
+        ${status !== 'paid' ? `<button class="btn-sm paid-btn" onclick="openPaid('${loan.id}', '${loan.name}')">✓ Mark Paid</button>` : `<button class="btn-sm" onclick="undoPaid('${loan.id}')">↩ Undo Paid</button>`}
+        <button class="btn-sm delete-btn" onclick="openDelete('${loan.id}', '${loan.name}')">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderSummary();
+  renderLoans();
+}
+
+function openDelete(id, name) {
+  deleteTargetId = id;
+  document.getElementById('deleteNameLabel').textContent = name;
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function confirmDelete() {
+  loans = loans.filter(l => l.id !== deleteTargetId);
+  queueSync();
+  renderAll();
+  closeModal('deleteModal');
+}
+
+function openPaid(id, name) {
+  paidTargetId = id;
+  document.getElementById('paidNameLabel').textContent = name;
+  document.getElementById('paidDateInput').value = TODAY;
+  document.getElementById('paidModal').style.display = 'flex';
+}
+
+function confirmPaid() {
+  const paidDate = document.getElementById('paidDateInput').value;
+  const loan = loans.find(l => l.id === paidTargetId);
+  if (loan) { loan.status = 'paid'; loan.paidDate = paidDate; }
+  queueSync();
+  renderAll();
+  closeModal('paidModal');
+}
+
+function undoPaid(id) {
+  const loan = loans.find(l => l.id === id);
+  if (loan) { loan.status = 'active'; loan.paidDate = null; }
+  queueSync();
+  renderAll();
+}
+
+function openSetup() {
+  document.getElementById('setupToken').value = config.token || '';
+  document.getElementById('setupGistId').value = config.gistId || '';
+  document.getElementById('setupModal').style.display = 'flex';
+}
+
+async function saveSetup() {
+  const token = document.getElementById('setupToken').value.trim();
+  const gistId = document.getElementById('setupGistId').value.trim();
+  if (!token) return alert('Please enter your GitHub token.');
+  config.token = token;
+  config.gistId = gistId;
+  saveConfig();
+  closeModal('setupModal');
+  document.getElementById('setupBanner').style.display = 'none';
+  setSyncState('syncing', 'Connecting...');
+  if (gistId) {
+    await loadFromGist();
+  } else {
+    await saveToGist();
+    setSyncState('synced', 'Connected ✓');
+    showGistSuccess(config.gistId);
+  }
+}
+
+function showGistSuccess(gistId) {
+  document.getElementById('gistIdDisplay').value = gistId;
+  document.getElementById('gistSuccessModal').style.display = 'flex';
+}
+
+function copyGistId() {
+  const input = document.getElementById('gistIdDisplay');
+  input.select();
+  input.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = document.getElementById('copyGistBtn');
+    btn.textContent = 'Copied ✓';
+    btn.style.background = '#166534';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = ''; }, 2000);
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    document.getElementById('copyGistBtn').textContent = 'Copied ✓';
+  });
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal('deleteModal'); closeModal('paidModal'); closeModal('setupModal'); }
+});
+
+loadConfig();
+renderAll();
+</script>
+</body>
+</html>
